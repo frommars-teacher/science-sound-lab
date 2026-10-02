@@ -1,0 +1,706 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🔊 소리의 크기 vs 높낮이 탐구 시뮬레이터 (초6 과학)</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Google Fonts (Jua & Noto Sans KR) -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Jua&family=Noto+Sans+KR:wght@400;600;800&display=swap" rel="stylesheet">
+    <!-- FontAwesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Canvas Confetti CDN -->
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+    <style>
+        body {
+            font-family: 'Noto Sans KR', sans-serif;
+            background-color: #0f172a;
+            color: #f8fafc;
+        }
+        .font-jua {
+            font-family: 'Jua', sans-serif;
+        }
+        /* Custom Glowing Card Animations */
+        .glow-box-vol {
+            box-shadow: 0 0 25px rgba(244, 63, 94, 0.25);
+            border: 2px solid rgba(244, 63, 94, 0.4);
+        }
+        .glow-box-pitch {
+            box-shadow: 0 0 25px rgba(56, 189, 248, 0.25);
+            border: 2px solid rgba(56, 189, 248, 0.4);
+        }
+        /* Custom Pulse Effect */
+        @keyframes pulse-slow {
+            0%, 100% { transform: scale(1); opacity: 1; }
+            50% { transform: scale(1.03); opacity: 0.9; }
+        }
+        .animate-pulse-slow {
+            animation: pulse-slow 2.5s infinite ease-in-out;
+        }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col bg-slate-900 text-slate-100 p-3 sm:p-6 select-none">
+    <!-- Header -->
+    <header class="max-w-6xl w-full mx-auto mb-6 text-center relative">
+        <div class="inline-block bg-indigo-900/60 border border-indigo-500/30 px-4 py-1.5 rounded-full text-indigo-300 text-xs sm:text-sm font-semibold mb-2">
+            🔬 초등학교 6학년 과학 | 소리의 성질과 전달
+        </div>
+        <h1 class="text-3xl sm:text-5xl font-jua text-transparent bg-clip-text bg-gradient-to-r from-amber-300 via-rose-400 to-cyan-400 tracking-wide drop-shadow">
+            🔊 소리의 크기 vs 높낮이 탐구실
+        </h1>
+        <p class="text-slate-300 text-xs sm:text-base mt-2 max-w-2xl mx-auto">
+            "큰 소리는 음이 높은 걸까요?" <span class="text-yellow-300 font-bold underline">아닙니다!</span> 마이크에 소리를 내며 <strong class="text-rose-400">크기(진폭)</strong>와 <strong class="text-cyan-400">높낮이(진동수)</strong>가 어떻게 다른지 눈으로 직접 확인해보세요!
+        </p>
+    </header>
+
+    <!-- Main Content Container -->
+    <main class="max-w-6xl w-full mx-auto flex-1 flex flex-col gap-6">
+
+        <!-- Control Center & Concept Key -->
+        <section class="bg-slate-800/90 border border-slate-700/80 rounded-2xl p-4 sm:p-6 shadow-xl backdrop-blur">
+            <div class="flex flex-col md:flex-row items-center justify-between gap-4">
+                
+                <!-- Mic Control Button -->
+                <div class="flex flex-col sm:flex-row items-center gap-3 w-full md:w-auto">
+                    <button id="micBtn" onclick="toggleMic()" class="w-full sm:w-auto px-6 py-3.5 bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-400 hover:to-teal-500 text-white font-jua text-xl rounded-xl shadow-lg transition-all transform active:scale-95 flex items-center justify-center gap-2">
+                        <i class="fa-solid fa-microphone text-2xl"></i>
+                        <span id="micBtnText">마이크 시작하기</span>
+                    </button>
+                    
+                    <div class="flex items-center gap-2 bg-slate-900/80 px-4 py-2 rounded-xl border border-slate-700 w-full sm:w-auto justify-between sm:justify-start">
+                        <span class="text-xs text-slate-400">소음 감도:</span>
+                        <input type="range" id="noiseThreshold" min="5" max="40" value="15" class="w-24 accent-indigo-500 cursor-pointer">
+                        <span id="noiseVal" class="text-xs text-indigo-300 font-mono">15</span>
+                    </div>
+                </div>
+
+                <!-- Concept Summary Cards -->
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 w-full md:w-auto text-xs sm:text-sm">
+                    <div class="bg-rose-950/40 border border-rose-500/30 p-2.5 rounded-xl flex items-center gap-3">
+                        <div class="w-10 h-10 rounded-lg bg-rose-500/20 flex items-center justify-center text-rose-400 text-lg flex-shrink-0">
+                            <i class="fa-solid fa-volume-high"></i>
+                        </div>
+                        <div>
+                            <div class="font-bold text-rose-300">소리의 크기 (진폭)</div>
+                            <div class="text-slate-400 text-[11px]">그래프의 <span class="text-rose-400 font-bold">위아래 폭</span>이 커짐 (dB)</div>
+                        </div>
+                    </div>
+                    <div class="bg-cyan-950/40 border border-cyan-500/30 p-2.5 rounded-xl flex items-center gap-3">
+                        <div class="w-10 h-10 rounded-lg bg-cyan-500/20 flex items-center justify-center text-cyan-400 text-lg flex-shrink-0">
+                            <i class="fa-solid fa-wave-square"></i>
+                        </div>
+                        <div>
+                            <div class="font-bold text-cyan-300">소리의 높낮이 (진동수)</div>
+                            <div class="text-slate-400 text-[11px]">그래프가 <span class="text-cyan-400 font-bold">촘촘해짐</span> (Hz / 음계)</div>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+        </section>
+
+        <!-- Visualizer Canvas Panel -->
+        <section class="bg-slate-800/90 border border-slate-700/80 rounded-2xl p-4 shadow-xl flex flex-col gap-2 relative overflow-hidden">
+            <div class="flex items-center justify-between text-xs sm:text-sm font-semibold px-2">
+                <span class="text-amber-300 flex items-center gap-2">
+                    <i class="fa-solid fa-chart-line"></i> 실시간 소리 파형 분석기 (Waveform Visualizer)
+                </span>
+                <span id="statusIndicator" class="text-slate-400 flex items-center gap-1.5">
+                    <span class="w-2.5 h-2.5 rounded-full bg-slate-500 inline-block" id="statusDot"></span>
+                    <span id="statusText">마이크 대기 중</span>
+                </span>
+            </div>
+
+            <!-- Canvas Container -->
+            <div class="relative w-full h-48 sm:h-64 bg-slate-950 rounded-xl overflow-hidden border border-slate-800">
+                <canvas id="waveCanvas" class="w-full h-full block"></canvas>
+                
+                <!-- Overlay Guides on Canvas -->
+                <div class="absolute top-2 left-3 pointer-events-none text-[11px] text-rose-400/80 flex items-center gap-1">
+                    <i class="fa-solid fa-arrows-up-down"></i> 위아래 높이 = 소리 크기(진폭)
+                </div>
+                <div class="absolute bottom-2 right-3 pointer-events-none text-[11px] text-cyan-400/80 flex items-center gap-1">
+                    <i class="fa-solid fa-arrows-left-right"></i> 간격 촘촘함 = 소리 높낮이(진동수)
+                </div>
+            </div>
+        </section>
+
+        <!-- Dual Gauges Section: Volume vs Pitch -->
+        <section class="grid grid-cols-1 md:grid-cols-2 gap-6">
+            
+            <!-- LEFT BOX: VOLUME (크기) -->
+            <div class="glow-box-vol bg-slate-800/90 rounded-2xl p-5 flex flex-col justify-between relative overflow-hidden">
+                <div class="flex justify-between items-start mb-2">
+                    <div>
+                        <span class="text-xs font-bold text-rose-400 bg-rose-950/60 border border-rose-500/30 px-2.5 py-1 rounded-md">
+                            요소 1 : 진폭 (Amplitude)
+                        </span>
+                        <h2 class="text-2xl font-jua text-white mt-1 flex items-center gap-2">
+                            <i class="fa-solid fa-volume-high text-rose-400"></i> 소리의 크기
+                        </h2>
+                    </div>
+                    <div class="text-right">
+                        <div id="dbDisplay" class="text-3xl font-jua text-rose-400">0 <span class="text-sm text-slate-400 font-sans">dB</span></div>
+                    </div>
+                </div>
+
+                <!-- Volume Bar Gauge -->
+                <div class="my-4">
+                    <div class="flex justify-between text-xs text-slate-400 mb-1">
+                        <span>작은 소리 (귓속말)</span>
+                        <span>보통</span>
+                        <span>큰 소리 (함성)</span>
+                    </div>
+                    <div class="w-full h-6 bg-slate-950 rounded-full p-1 border border-slate-700 relative overflow-hidden">
+                        <div id="volumeBar" class="h-full rounded-full bg-gradient-to-r from-amber-400 via-rose-500 to-red-600 transition-all duration-75 w-0"></div>
+                    </div>
+                </div>
+
+                <!-- Avatar Reaction for Volume -->
+                <div class="bg-slate-900/80 border border-slate-700/60 rounded-xl p-3 flex items-center gap-4">
+                    <div id="volEmoji" class="text-4xl sm:text-5xl flex-shrink-0 animate-pulse-slow">🤫</div>
+                    <div>
+                        <div id="volTitle" class="font-bold text-rose-300 text-sm">조용합니다</div>
+                        <div id="volDesc" class="text-slate-400 text-xs mt-0.5">마이크에 소리를 크게 내면 에너지가 커져 그래프가 위아래로 커져요!</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- RIGHT BOX: PITCH (높낮이) -->
+            <div class="glow-box-pitch bg-slate-800/90 rounded-2xl p-5 flex flex-col justify-between relative overflow-hidden">
+                <div class="flex justify-between items-start mb-2">
+                    <div>
+                        <span class="text-xs font-bold text-cyan-400 bg-cyan-950/60 border border-cyan-500/30 px-2.5 py-1 rounded-md">
+                            요소 2 : 진동수 (Frequency)
+                        </span>
+                        <h2 class="text-2xl font-jua text-white mt-1 flex items-center gap-2">
+                            <i class="fa-solid fa-music text-cyan-400"></i> 소리의 높낮이
+                        </h2>
+                    </div>
+                    <div class="text-right">
+                        <div id="pitchDisplay" class="text-3xl font-jua text-cyan-400">--- <span class="text-sm text-slate-400 font-sans">Hz</span></div>
+                        <div id="noteDisplay" class="text-sm font-bold text-amber-300 font-mono">음계: -</div>
+                    </div>
+                </div>
+
+                <!-- Pitch Dial / Piano Bar Indicator -->
+                <div class="my-4">
+                    <div class="flex justify-between text-xs text-slate-400 mb-1">
+                        <span>낮은 음 (🐻 곰 목소리)</span>
+                        <span>중음</span>
+                        <span>높은 음 (🐤 새 소리)</span>
+                    </div>
+                    <div class="w-full h-6 bg-slate-950 rounded-full p-1 border border-slate-700 relative overflow-hidden">
+                        <div id="pitchBar" class="h-full rounded-full bg-gradient-to-r from-blue-500 via-cyan-400 to-teal-300 transition-all duration-75 w-0"></div>
+                    </div>
+                </div>
+
+                <!-- Avatar Reaction for Pitch -->
+                <div class="bg-slate-900/80 border border-slate-700/60 rounded-xl p-3 flex items-center gap-4">
+                    <div id="pitchEmoji" class="text-4xl sm:text-5xl flex-shrink-0 animate-pulse-slow">🐻</div>
+                    <div>
+                        <div id="pitchTitle" class="font-bold text-cyan-300 text-sm">소리를 기다리는 중</div>
+                        <div id="pitchDesc" class="text-slate-400 text-xs mt-0.5">높은 목소리를 내면 1초에 떨리는 횟수(Hz)가 많아져 그래프가 촘촘해져요!</div>
+                    </div>
+                </div>
+            </div>
+
+        </section>
+
+        <!-- Interactive Challenge Mode Section -->
+        <section class="bg-gradient-to-r from-slate-800 via-indigo-950/80 to-slate-800 border border-indigo-500/30 rounded-2xl p-5 shadow-xl">
+            <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 mb-4">
+                <div>
+                    <h3 class="text-xl font-jua text-amber-300 flex items-center gap-2">
+                        <i class="fa-solid fa-trophy text-yellow-400"></i> 소리 차이 극복 미션 챌린지!
+                    </h3>
+                    <p class="text-xs text-slate-300">
+                        친구들이 오해하기 쉬운 조합을 마이크로 직접 소리 내며 미션을 성공해보세요!
+                    </p>
+                </div>
+                <div id="missionBadge" class="bg-slate-900 px-3 py-1 rounded-full text-xs text-indigo-300 border border-indigo-500/30 font-semibold">
+                    미션 선택 가능
+                </div>
+            </div>
+
+            <!-- Mission Cards Grid -->
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
+                
+                <!-- Mission 1 -->
+                <div id="mCard1" onclick="selectMission(1)" class="cursor-pointer bg-slate-900/90 border border-slate-700 hover:border-amber-400 p-3.5 rounded-xl transition-all relative">
+                    <div class="flex justify-between items-center mb-1">
+                        <span class="text-xs font-bold text-amber-400">미션 1</span>
+                        <span id="mStatus1" class="text-xs text-slate-500 font-bold"><i class="fa-regular fa-circle"></i> 대기</span>
+                    </div>
+                    <div class="font-jua text-lg text-white">"작고 높은 소리"</div>
+                    <div class="text-[11px] text-slate-400 mt-1">
+                        귓속말하듯 <span class="text-rose-400 font-bold">작게</span> + 아주 <span class="text-cyan-400 font-bold">높은 톤</span> ("찌~")
+                    </div>
+                </div>
+
+                <!-- Mission 2 -->
+                <div id="mCard2" onclick="selectMission(2)" class="cursor-pointer bg-slate-900/90 border border-slate-700 hover:border-amber-400 p-3.5 rounded-xl transition-all relative">
+                    <div class="flex justify-between items-center mb-1">
+                        <span class="text-xs font-bold text-amber-400">미션 2</span>
+                        <span id="mStatus2" class="text-xs text-slate-500 font-bold"><i class="fa-regular fa-circle"></i> 대기</span>
+                    </div>
+                    <div class="font-jua text-lg text-white">"크고 낮은 소리"</div>
+                    <div class="text-[11px] text-slate-400 mt-1">
+                        배에 힘주고 <span class="text-rose-400 font-bold">크게</span> + 곰처럼 <span class="text-cyan-400 font-bold">낮은 톤</span> ("웅~")
+                    </div>
+                </div>
+
+                <!-- Mission 3 -->
+                <div id="mCard3" onclick="selectMission(3)" class="cursor-pointer bg-slate-900/90 border border-slate-700 hover:border-amber-400 p-3.5 rounded-xl transition-all relative">
+                    <div class="flex justify-between items-center mb-1">
+                        <span class="text-xs font-bold text-amber-400">미션 3</span>
+                        <span id="mStatus3" class="text-xs text-slate-500 font-bold"><i class="fa-regular fa-circle"></i> 대기</span>
+                    </div>
+                    <div class="font-jua text-lg text-white">"크고 높은 소리"</div>
+                    <div class="text-[11px] text-slate-400 mt-1">
+                        신나게 <span class="text-rose-400 font-bold">크게</span> + 득음하듯 <span class="text-cyan-400 font-bold">높은 톤</span> ("야호~")
+                    </div>
+                </div>
+
+            </div>
+
+            <!-- Mission Target Progress Gauge Bar -->
+            <div id="missionProgressBox" class="mt-4 bg-slate-900/80 p-3 rounded-xl border border-slate-700/80 hidden">
+                <div class="flex justify-between items-center text-xs mb-1.5">
+                    <span id="missionTargetText" class="text-indigo-300 font-bold">미션 진행 중...</span>
+                    <span id="missionTimerText" class="text-amber-400 font-mono">1.5초 유지 필요</span>
+                </div>
+                <div class="w-full bg-slate-950 h-3 rounded-full overflow-hidden border border-slate-800">
+                    <div id="missionProgressBar" class="h-full bg-gradient-to-r from-amber-400 to-emerald-400 w-0 transition-all duration-100"></div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Educational Concept Summary -->
+        <section class="bg-slate-800/60 border border-slate-700/60 rounded-2xl p-5 text-xs sm:text-sm">
+            <h3 class="font-jua text-lg text-indigo-300 mb-2 flex items-center gap-2">
+                <i class="fa-solid fa-lightbulb text-yellow-400"></i> 초등 6학년 과학 개념 한 눈에 정리하기
+            </h3>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-slate-300">
+                <div class="bg-slate-900/60 p-3 rounded-xl border border-slate-800">
+                    <div class="font-bold text-rose-300 mb-1">1. 소리의 크기 (Loudness)</div>
+                    <p>소리가 얼마나 **세기(Volume)**가 강한지 나타냅니다. 큰 소리를 낼수록 공기의 떨림(진폭)이 커져서 파형의 **위아래 높이**가 높게 나타납니다.</p>
+                </div>
+                <div class="bg-slate-900/60 p-3 rounded-xl border border-slate-800">
+                    <div class="font-bold text-cyan-300 mb-1">2. 소리의 높낮이 (Pitch)</div>
+                    <p>소리가 얼마나 **높거나 낮은지(Pitch)** 나타냅니다. 높은 소리를 낼수록 1초 동안 진동(진동수/Hz)을 많이 하여 파형이 **촘촘하게** 붙어 나타납니다.</p>
+                </div>
+            </div>
+        </section>
+
+    </main>
+
+    <!-- JavaScript Section -->
+    <script>
+        let audioCtx = null;
+        let analyser = null;
+        let micStream = null;
+        let isListening = false;
+        let animationId = null;
+
+        // Visual Canvas
+        const canvas = document.getElementById('waveCanvas');
+        const ctx = canvas.getContext('2d');
+
+        // Pitch & Note definitions
+        const NOTE_NAMES = ["도", "도#", "레", "레#", "미", "파", "파#", "솔", "솔#", "라", "라#", "시"];
+
+        // Mission Logic States
+        let currentMission = 0;
+        let missionHoldTime = 0;
+        const REQUIRED_HOLD_TIME = 15; // ~1.5 sec @ 10fps check
+
+        // DOM Element references
+        const micBtn = document.getElementById('micBtn');
+        const micBtnText = document.getElementById('micBtnText');
+        const statusDot = document.getElementById('statusDot');
+        const statusText = document.getElementById('statusText');
+
+        const dbDisplay = document.getElementById('dbDisplay');
+        const volumeBar = document.getElementById('volumeBar');
+        const volEmoji = document.getElementById('volEmoji');
+        const volTitle = document.getElementById('volTitle');
+        const volDesc = document.getElementById('volDesc');
+
+        const pitchDisplay = document.getElementById('pitchDisplay');
+        const noteDisplay = document.getElementById('noteDisplay');
+        const pitchBar = document.getElementById('pitchBar');
+        const pitchEmoji = document.getElementById('pitchEmoji');
+        const pitchTitle = document.getElementById('pitchTitle');
+        const pitchDesc = document.getElementById('pitchDesc');
+
+        function resizeCanvas() {
+            canvas.width = canvas.parentElement.clientWidth;
+            canvas.height = canvas.parentElement.clientHeight;
+        }
+        window.addEventListener('resize', resizeCanvas);
+        resizeCanvas();
+
+        async function toggleMic() {
+            if (!isListening) {
+                try {
+                    audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+                    micStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+                    
+                    const source = audioCtx.createMediaStreamSource(micStream);
+                    analyser = audioCtx.createAnalyser();
+                    analyser.fftSize = 2048;
+                    source.connect(analyser);
+
+                    isListening = true;
+                    micBtn.classList.remove('from-emerald-500', 'to-teal-600');
+                    micBtn.classList.add('from-rose-600', 'to-red-700');
+                    micBtnText.textContent = "마이크 끄기";
+
+                    statusDot.classList.remove('bg-slate-500');
+                    statusDot.classList.add('bg-emerald-400', 'animate-pulse');
+                    statusText.textContent = "실시간 감지 중";
+
+                    draw();
+                } catch (err) {
+                    showCustomModal("마이크 접근 오류", "마이크 권한을 허용해주세요! 인터넷 브라우저 설정에서 마이크를 켜야 테스트할 수 있습니다.");
+                }
+            } else {
+                stopMic();
+            }
+        }
+
+        function stopMic() {
+            isListening = false;
+            if (animationId) cancelAnimationFrame(animationId);
+            if (micStream) {
+                micStream.getTracks().forEach(track => track.stop());
+            }
+            if (audioCtx) {
+                audioCtx.close();
+            }
+
+            micBtn.classList.remove('from-rose-600', 'to-red-700');
+            micBtn.classList.add('from-emerald-500', 'to-teal-600');
+            micBtnText.textContent = "마이크 시작하기";
+
+            statusDot.classList.remove('bg-emerald-400', 'animate-pulse');
+            statusDot.classList.add('bg-slate-500');
+            statusText.textContent = "마이크 대기 중";
+
+            // Reset Displays
+            dbDisplay.innerHTML = '0 <span class="text-sm text-slate-400 font-sans">dB</span>';
+            volumeBar.style.width = '0%';
+            pitchDisplay.innerHTML = '--- <span class="text-sm text-slate-400 font-sans">Hz</span>';
+            noteDisplay.textContent = '음계: -';
+            pitchBar.style.width = '0%';
+
+            volEmoji.textContent = '🤫';
+            volTitle.textContent = '조용합니다';
+            pitchEmoji.textContent = '🐻';
+            pitchTitle.textContent = '소리를 기다리는 중';
+
+            // Clear canvas
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+        }
+
+        function autoCorrelate(buf, sampleRate) {
+            let SIZE = buf.length;
+            let rms = 0;
+
+            for (let i = 0; i < SIZE; i++) {
+                let val = buf[i];
+                rms += val * val;
+            }
+            rms = Math.sqrt(rms / SIZE);
+
+            // Noise threshold calculation
+            const noiseGate = parseInt(document.getElementById('noiseThreshold').value) / 1000;
+            if (rms < noiseGate) return { pitch: -1, volumeDb: 0, rms: rms };
+
+            let r1 = 0, r2 = SIZE - 1, thres = 0.2;
+            for (let i = 0; i < SIZE / 2; i++) {
+                if (Math.abs(buf[i]) < thres) { r1 = i; break; }
+            }
+            for (let i = 1; i < SIZE / 2; i++) {
+                if (Math.abs(buf[SIZE - i]) < thres) { r2 = SIZE - i; break; }
+            }
+
+            buf = buf.slice(r1, r2);
+            SIZE = buf.length;
+
+            let c = new Array(SIZE).fill(0);
+            for (let i = 0; i < SIZE; i++) {
+                for (let j = 0; j < SIZE - i; j++) {
+                    c[i] = c[i] + buf[j] * buf[j + i];
+                }
+            }
+
+            let d = 0;
+            while (c[d] > c[d + 1]) d++;
+            let maxval = -1, maxpos = -1;
+            for (let i = d; i < SIZE; i++) {
+                if (c[i] > maxval) {
+                    maxval = c[i];
+                    maxpos = i;
+                }
+            }
+            let T0 = maxpos;
+
+            // Parabolic interpolation for pitch precision
+            let x1 = c[T0 - 1], x2 = c[T0], x3 = c[T0 + 1];
+            let a = (x1 + x3 - 2 * x2) / 2;
+            let b = (x3 - x1) / 2;
+            if (a) T0 = T0 - b / (2 * a);
+
+            let freq = sampleRate / T0;
+            let db = Math.max(0, Math.round(20 * Math.log10(rms * 10) + 75));
+
+            return { pitch: Math.round(freq), volumeDb: db, rms: rms };
+        }
+
+        function getNoteFromPitch(frequency) {
+            if (frequency < 50 || frequency > 2000) return "-";
+            const noteNum = 12 * (Math.log(frequency / 440) / Math.log(2));
+            const noteIndex = (Math.round(noteNum) + 69) % 12;
+            return NOTE_NAMES[noteIndex] || "-";
+        }
+
+        function draw() {
+            if (!isListening) return;
+
+            const bufferLength = analyser.fftSize;
+            const dataArray = new Float32Array(bufferLength);
+            analyser.getFloatTimeDomainData(dataArray);
+
+            const sampleRate = audioCtx.sampleRate;
+            const audioData = autoCorrelate(dataArray, sampleRate);
+
+            // Update UI Gauges
+            updateGauges(audioData);
+
+            // Draw Waveform on Canvas
+            ctx.fillStyle = '#020617';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            // Draw Center Reference Line
+            ctx.beginPath();
+            ctx.strokeStyle = '#1e293b';
+            ctx.lineWidth = 1;
+            ctx.moveTo(0, canvas.height / 2);
+            ctx.lineTo(canvas.width, canvas.height / 2);
+            ctx.stroke();
+
+            // Draw Dynamic Neon Wave
+            ctx.beginPath();
+            ctx.lineWidth = 3;
+
+            // Wave color changes dynamically according to volume and pitch
+            const isHighPitch = audioData.pitch > 350;
+            const isLoud = audioData.volumeDb > 65;
+
+            if (isLoud && isHighPitch) {
+                ctx.strokeStyle = '#f43f5e'; // Bright Rose Neon
+            } else if (isHighPitch) {
+                ctx.strokeStyle = '#38bdf8'; // Cyan Neon
+            } else if (isLoud) {
+                ctx.strokeStyle = '#f59e0b'; // Amber Neon
+            } else {
+                ctx.strokeStyle = '#10b981'; // Emerald Neon
+            }
+
+            let sliceWidth = canvas.width * 1.0 / bufferLength;
+            let x = 0;
+
+            for (let i = 0; i < bufferLength; i++) {
+                let v = dataArray[i];
+                let y = (v * canvas.height / 2) + canvas.height / 2;
+
+                if (i === 0) {
+                    ctx.moveTo(x, y);
+                } else {
+                    ctx.lineTo(x, y);
+                }
+                x += sliceWidth;
+            }
+            ctx.stroke();
+
+            // Evaluate Mission Progress
+            checkMission(audioData);
+
+            animationId = requestAnimationFrame(draw);
+        }
+
+        function updateGauges(data) {
+            const db = data.volumeDb;
+            const pitch = data.pitch;
+
+            // --- VOLUME UI ---
+            dbDisplay.innerHTML = `${db} <span class="text-sm text-slate-400 font-sans">dB</span>`;
+            const volPercent = Math.min(100, Math.max(0, (db - 30) * 1.6));
+            volumeBar.style.width = `${volPercent}%`;
+
+            if (db < 40) {
+                volEmoji.textContent = '🤫';
+                volTitle.textContent = '작은 소리 (진폭이 낮아요)';
+                volDesc.textContent = '파형의 위아래 높이가 납작합니다. 에너지가 작은 소리입니다.';
+            } else if (db < 70) {
+                volEmoji.textContent = '🗣️';
+                volTitle.textContent = '보통 크기의 소리';
+                volDesc.textContent = '일상 대화 정도의 적절한 소리 크기입니다.';
+            } else {
+                volEmoji.textContent = '📢';
+                volTitle.textContent = '큰 소리! (진폭이 커요)';
+                volDesc.textContent = '파형이 위아래로 매우 높게 출렁입니다! 큰 에너지를 가졌습니다.';
+            }
+
+            // --- PITCH UI ---
+            if (pitch > 0 && db > 35) {
+                pitchDisplay.innerHTML = `${pitch} <span class="text-sm text-slate-400 font-sans">Hz</span>`;
+                noteDisplay.textContent = `음계: ${getNoteFromPitch(pitch)}`;
+
+                const pitchPercent = Math.min(100, Math.max(0, (pitch - 80) / 5));
+                pitchBar.style.width = `${pitchPercent}%`;
+
+                if (pitch < 180) {
+                    pitchEmoji.textContent = '🐻';
+                    pitchTitle.textContent = '낮은 음 (진동수가 적어요)';
+                    pitchDesc.textContent = '1초에 떨리는 횟수가 적어 파형의 격자가 넓고 완만합니다.';
+                } else if (pitch < 380) {
+                    pitchEmoji.textContent = '🧍';
+                    pitchTitle.textContent = '보통 높낮이의 음';
+                    pitchDesc.textContent = '편안한 높이의 음높이입니다.';
+                } else {
+                    pitchEmoji.textContent = '🐤';
+                    pitchTitle.textContent = '높은 음 (진동수가 많아요!)';
+                    pitchDesc.textContent = '1초에 촘촘하게 많이 떨립니다! 파형 간격이 매우 가깝습니다.';
+                }
+            } else {
+                pitchDisplay.innerHTML = `--- <span class="text-sm text-slate-400 font-sans">Hz</span>`;
+                noteDisplay.textContent = '음계: -';
+                pitchBar.style.width = '0%';
+            }
+        }
+
+        function selectMission(id) {
+            currentMission = id;
+            missionHoldTime = 0;
+
+            [1, 2, 3].forEach(m => {
+                const card = document.getElementById(`mCard${m}`);
+                if (m === id) {
+                    card.classList.add('border-amber-400', 'ring-2', 'ring-amber-400/50');
+                } else {
+                    card.classList.remove('border-amber-400', 'ring-2', 'ring-amber-400/50');
+                }
+            });
+
+            const pBox = document.getElementById('missionProgressBox');
+            const targetText = document.getElementById('missionTargetText');
+            pBox.classList.remove('hidden');
+
+            if (id === 1) targetText.textContent = "🎯 목표: 작게(dB < 55) + 높게(Hz > 380)";
+            if (id === 2) targetText.textContent = "🎯 목표: 크게(dB > 70) + 낮게(Hz < 200)";
+            if (id === 3) targetText.textContent = "🎯 목표: 크게(dB > 72) + 높게(Hz > 400)";
+
+            document.getElementById('missionBadge').textContent = `미션 ${id} 진행 중`;
+            document.getElementById('missionBadge').className = "bg-amber-500 text-slate-950 px-3 py-1 rounded-full text-xs font-bold";
+        }
+
+        function checkMission(data) {
+            if (!currentMission || !isListening) return;
+
+            const db = data.volumeDb;
+            const pitch = data.pitch;
+            let successCondition = false;
+
+            if (currentMission === 1) { // 작고 높은 소리
+                if (db > 35 && db < 58 && pitch > 370) successCondition = true;
+            } else if (currentMission === 2) { // 크고 낮은 소리
+                if (db >= 68 && pitch > 50 && pitch < 220) successCondition = true;
+            } else if (currentMission === 3) { // 크고 높은 소리
+                if (db >= 70 && pitch >= 380) successCondition = true;
+            }
+
+            const pBar = document.getElementById('missionProgressBar');
+            if (successCondition) {
+                missionHoldTime++;
+                let pct = (missionHoldTime / REQUIRED_HOLD_TIME) * 100;
+                pBar.style.width = `${pct}%`;
+
+                if (missionHoldTime >= REQUIRED_HOLD_TIME) {
+                    triggerMissionSuccess(currentMission);
+                    currentMission = 0;
+                }
+            } else {
+                missionHoldTime = Math.max(0, missionHoldTime - 0.5);
+                let pct = (missionHoldTime / REQUIRED_HOLD_TIME) * 100;
+                pBar.style.width = `${pct}%`;
+            }
+        }
+
+        function triggerMissionSuccess(id) {
+            const statusElem = document.getElementById(`mStatus${id}`);
+            statusElem.innerHTML = `<i class="fa-solid fa-circle-check text-emerald-400"></i> 성공!`;
+            statusElem.className = "text-xs text-emerald-400 font-bold";
+
+            document.getElementById('missionBadge').textContent = `미션 ${id} 성공 🎉`;
+            document.getElementById('missionBadge').className = "bg-emerald-500 text-white px-3 py-1 rounded-full text-xs font-bold animate-bounce";
+
+            // Confetti animation
+            confetti({
+                particleCount: 80,
+                spread: 70,
+                origin: { y: 0.6 }
+            });
+
+            // Play celebratory synth sound via Web Audio API
+            playSuccessSound();
+        }
+
+        function playSuccessSound() {
+            if (!audioCtx) return;
+            const now = audioCtx.currentTime;
+            const osc = audioCtx.createOscillator();
+            const gain = audioCtx.createGain();
+
+            osc.type = 'triangle';
+            osc.frequency.setValueAtTime(523.25, now); // C5
+            osc.frequency.setValueAtTime(659.25, now + 0.1); // E5
+            osc.frequency.setValueAtTime(783.99, now + 0.2); // G5
+            osc.frequency.setValueAtTime(1046.50, now + 0.3); // C6
+
+            gain.gain.setValueAtTime(0.2, now);
+            gain.gain.exponentialRampToValueAtTime(0.001, now + 0.6);
+
+            osc.connect(gain);
+            gain.connect(audioCtx.destination);
+
+            osc.start(now);
+            osc.stop(now + 0.6);
+        }
+
+        // Noise gate slider input listener
+        document.getElementById('noiseThreshold').addEventListener('input', (e) => {
+            document.getElementById('noiseVal').textContent = e.target.value;
+        });
+
+        function showCustomModal(title, message) {
+            const modal = document.createElement('div');
+            modal.className = "fixed inset-0 bg-black/80 flex items-center justify-center p-4 z-50";
+            modal.innerHTML = `
+                <div class="bg-slate-800 border border-slate-700 rounded-2xl p-6 max-w-sm w-full text-center shadow-2xl">
+                    <div class="text-4xl mb-3">📢</div>
+                    <h3 class="text-xl font-jua text-amber-300 mb-2">${title}</h3>
+                    <p class="text-slate-300 text-sm mb-5">${message}</p>
+                    <button onclick="this.parentElement.parentElement.remove()" class="px-5 py-2 bg-indigo-600 hover:bg-indigo-500 text-white font-jua rounded-xl w-full">확인</button>
+                </div>
+            `;
+            document.body.appendChild(modal);
+        }
+    </script>
+</body>
+</html>
