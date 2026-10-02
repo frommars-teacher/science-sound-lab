@@ -106,7 +106,7 @@
         <section class="bg-slate-800/90 border border-slate-700/80 rounded-2xl p-4 shadow-xl flex flex-col gap-2 relative overflow-hidden">
             <div class="flex items-center justify-between text-xs sm:text-sm font-semibold px-2">
                 <span class="text-amber-300 flex items-center gap-2">
-                    <i class="fa-solid fa-chart-line"></i> 실시간 소리 파형 분석기 (Waveform Visualizer)
+                    <i class="fa-solid fa-chart-line"></i> 실시간 소리 파형 분석기 <span class="text-slate-500 font-normal">(수치는 안정화해서 표시)</span>
                 </span>
                 <span id="statusIndicator" class="text-slate-400 flex items-center gap-1.5">
                     <span class="w-2.5 h-2.5 rounded-full bg-slate-500 inline-block" id="statusDot"></span>
@@ -318,6 +318,78 @@
         let missionHoldTime = 0;
         const REQUIRED_HOLD_TIME = 15; // ~1.5 sec @ 10fps check
 
+        // 안정화 필터: 같은 소리를 낼 때 수치가 지나치게 흔들리지 않도록 함
+        let smoothedDb = 0;
+        let stablePitch = -1;
+        let pitchHistory = [];
+        let pendingPitch = -1;
+        let pendingPitchFrames = 0;
+        let lastValidPitchAt = 0;
+        const PITCH_HISTORY_SIZE = 7;
+        const PITCH_SWITCH_FRAMES = 4;
+
+        function median(values) {
+            if (!values.length) return -1;
+            const arr = [...values].sort((a, b) => a - b);
+            return arr[Math.floor(arr.length / 2)];
+        }
+
+        function stabilizeAudio(raw) {
+            // 크기: 지수이동평균으로 급격한 출렁임 완화
+            const targetDb = raw.volumeDb || 0;
+            const alpha = targetDb > smoothedDb ? 0.14 : 0.08;
+            smoothedDb = smoothedDb === 0 ? targetDb : (smoothedDb * (1 - alpha) + targetDb * alpha);
+            if (targetDb === 0 && smoothedDb < 2) smoothedDb = 0;
+
+            // 높낮이: 유효 범위 밖 값 제거 + 중앙값 + 급격한 점프 확인
+            let p = raw.pitch;
+            const now = performance.now();
+            if (p >= 70 && p <= 1200) {
+                lastValidPitchAt = now;
+                pitchHistory.push(p);
+                if (pitchHistory.length > PITCH_HISTORY_SIZE) pitchHistory.shift();
+                const candidate = median(pitchHistory);
+
+                if (stablePitch < 0) {
+                    stablePitch = candidate;
+                } else {
+                    const diffRatio = Math.abs(candidate - stablePitch) / stablePitch;
+                    if (diffRatio <= 0.18) {
+                        // 같은 음으로 판단: 천천히 따라감
+                        stablePitch = stablePitch * 0.78 + candidate * 0.22;
+                        pendingPitch = -1;
+                        pendingPitchFrames = 0;
+                    } else {
+                        // 실제 음 변화인지 잠깐 튄 값인지 4프레임 확인
+                        if (pendingPitch < 0 || Math.abs(candidate - pendingPitch) / Math.max(1, pendingPitch) > 0.12) {
+                            pendingPitch = candidate;
+                            pendingPitchFrames = 1;
+                        } else {
+                            pendingPitchFrames++;
+                            pendingPitch = pendingPitch * 0.7 + candidate * 0.3;
+                        }
+                        if (pendingPitchFrames >= PITCH_SWITCH_FRAMES) {
+                            stablePitch = pendingPitch;
+                            pitchHistory = [candidate];
+                            pendingPitch = -1;
+                            pendingPitchFrames = 0;
+                        }
+                    }
+                }
+            } else if (now - lastValidPitchAt > 350) {
+                stablePitch = -1;
+                pitchHistory = [];
+                pendingPitch = -1;
+                pendingPitchFrames = 0;
+            }
+
+            return {
+                pitch: stablePitch > 0 ? Math.round(stablePitch) : -1,
+                volumeDb: Math.round(smoothedDb),
+                rms: raw.rms
+            };
+        }
+
         // DOM Element references
         const micBtn = document.getElementById('micBtn');
         const micBtnText = document.getElementById('micBtnText');
@@ -348,11 +420,18 @@
             if (!isListening) {
                 try {
                     audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-                    micStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+                    micStream = await navigator.mediaDevices.getUserMedia({
+                        audio: {
+                            echoCancellation: false,
+                            noiseSuppression: false,
+                            autoGainControl: false
+                        }
+                    });
                     
                     const source = audioCtx.createMediaStreamSource(micStream);
                     analyser = audioCtx.createAnalyser();
-                    analyser.fftSize = 2048;
+                    analyser.fftSize = 4096;
+                    analyser.smoothingTimeConstant = 0.85;
                     source.connect(analyser);
 
                     isListening = true;
@@ -363,6 +442,13 @@
                     statusDot.classList.remove('bg-slate-500');
                     statusDot.classList.add('bg-emerald-400', 'animate-pulse');
                     statusText.textContent = "실시간 감지 중";
+
+                    smoothedDb = 0;
+                    stablePitch = -1;
+                    pitchHistory = [];
+                    pendingPitch = -1;
+                    pendingPitchFrames = 0;
+                    lastValidPitchAt = 0;
 
                     draw();
                 } catch (err) {
@@ -397,6 +483,13 @@
             pitchDisplay.innerHTML = '--- <span class="text-sm text-slate-400 font-sans">Hz</span>';
             noteDisplay.textContent = '음계: -';
             pitchBar.style.width = '0%';
+
+            smoothedDb = 0;
+            stablePitch = -1;
+            pitchHistory = [];
+            pendingPitch = -1;
+            pendingPitchFrames = 0;
+            lastValidPitchAt = 0;
 
             volEmoji.textContent = '🤫';
             volTitle.textContent = '조용합니다';
@@ -477,9 +570,10 @@
             analyser.getFloatTimeDomainData(dataArray);
 
             const sampleRate = audioCtx.sampleRate;
-            const audioData = autoCorrelate(dataArray, sampleRate);
+            const rawAudioData = autoCorrelate(dataArray, sampleRate);
+            const audioData = stabilizeAudio(rawAudioData);
 
-            // Update UI Gauges
+            // 안정화된 값으로 게이지/미션 판정
             updateGauges(audioData);
 
             // Draw Waveform on Canvas
