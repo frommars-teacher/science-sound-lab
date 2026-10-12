@@ -1,0 +1,288 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<title>소리의 세기와 높이 보기</title>
+<style>
+  :root { --bg:#0f172a; --panel:#1e293b; --fg:#f8fafc; --muted:#94a3b8; --loud:#f97316; --pitch:#38bdf8; --border:#334155; }
+  * { box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+  html,body { margin:0; background:var(--bg); color:var(--fg); font-family:Pretendard,-apple-system,"Segoe UI","Malgun Gothic",sans-serif; }
+  body { display:flex; flex-direction:column; height:100dvh; overflow:hidden; }
+  header { padding:10px 14px; display:flex; align-items:center; justify-content:space-between; gap:8px; border-bottom:1px solid var(--border); }
+  h1 { font-size:17px; margin:0; font-weight:700; }
+  #start { font:inherit; font-size:15px; font-weight:700; padding:8px 16px; border-radius:10px; border:1px solid var(--border); background:#2563eb; color:#fff; cursor:pointer; }
+  #start.on { background:#dc2626; }
+  #msg { font-size:13px; color:#fca5a5; padding:0 14px; min-height:0; }
+  .top { display:flex; gap:8px; padding:8px 12px; }
+  .chip { flex:1; border:1px solid var(--border); border-radius:12px; padding:8px 12px; background:var(--panel); }
+  .chip .k { font-size:13px; color:var(--muted); }
+  .chip .w { font-size:28px; font-weight:800; line-height:1.2; }
+  .chip .s { font-size:13px; color:var(--muted); min-height:16px; }
+  .chip.loud .w { color:var(--loud); } .chip.pitch .w { color:var(--pitch); }
+  main { flex:1; display:flex; gap:8px; padding:0 12px; min-height:200px; }
+  .gauge { width:74px; display:flex; flex-direction:column; }
+  .gauge .title { font-size:13px; text-align:center; margin-bottom:4px; font-weight:700; }
+  .gauge .bar { flex:1; position:relative; border:1px solid var(--border); border-radius:8px; overflow:hidden; background:var(--panel); }
+  .gauge .fill { position:absolute; left:0; right:0; bottom:0; height:0; background:var(--loud); }
+  .gauge .marker { position:absolute; left:0; right:0; height:8px; bottom:0; background:var(--pitch); transform:translateY(50%); }
+  .gauge .marker.off { background:#64748b; }
+  .gauge .lbl { position:absolute; left:0; right:0; text-align:center; font-size:11px; transform:translateY(-50%); pointer-events:none; text-shadow:0 0 3px #000,0 0 3px #000; }
+  .gauge .tick { position:absolute; left:0; right:0; border-top:1px dashed #475569; }
+  #stage { flex:1 1 0; min-width:0; min-height:0; align-self:stretch; border:1px solid var(--border); border-radius:12px; background:var(--panel); }
+  .trailWrap { padding:8px 12px 0; }
+  .trailWrap .cap { font-size:12px; color:var(--muted); margin-bottom:4px; }
+  #trail { width:100%; height:100px; border:1px solid var(--border); border-radius:12px; display:block; background:var(--panel); }
+  .controls { display:flex; flex-wrap:wrap; gap:10px 18px; align-items:center; padding:8px 12px 12px; font-size:13px; color:var(--muted); }
+  .controls label { display:flex; align-items:center; gap:6px; }
+  input[type=range] { width:110px; }
+  .tip { font-size:12px; color:var(--muted); padding:0 14px 8px; }
+</style>
+</head>
+<body>
+<header>
+  <h1>소리의 세기와 높이 보기</h1>
+  <button id="start">마이크 켜기</button>
+</header>
+<div id="msg"></div>
+<div class="top">
+  <div class="chip loud"><div class="k">세기 (크고 작음)</div><div class="w" id="loudWord">—</div><div class="s" id="loudSub"></div></div>
+  <div class="chip pitch"><div class="k">높이 (높고 낮음)</div><div class="w" id="pitchWord">—</div><div class="s" id="pitchSub"></div></div>
+</div>
+<main>
+  <div class="gauge loud">
+    <div class="title">세기</div>
+    <div class="bar" id="loudBar"><div class="fill" id="loudFill"></div></div>
+  </div>
+  <canvas id="stage"></canvas>
+  <div class="gauge pitch">
+    <div class="title">높이</div>
+    <div class="bar" id="pitchBar"><div class="marker off" id="pitchMarker"></div></div>
+  </div>
+</main>
+<div class="trailWrap">
+  <div class="cap">지나간 8초 동안의 소리 (공의 크기 = 세기, 공의 높이 = 높이)</div>
+  <canvas id="trail"></canvas>
+</div>
+<div class="controls">
+  <label>반응 속도 <input type="range" id="speed" min="1" max="5" step="1" value="3"> <span id="speedV">보통</span></label>
+  <label>마이크 감도 <input type="range" id="sens" min="1" max="5" step="1" value="3"> <span id="sensV">보통</span></label>
+  <label><input type="checkbox" id="noteChk"> 계이름 보기</label>
+</div>
+<div class="tip">기기에서 20~30cm 떨어져 "아~" 하고 소리 내 보세요. 작게/크게, 낮게/높게를 따로따로 바꿔 보세요.</div>
+
+<script>
+(function(){
+  var $ = function(s){ return document.querySelector(s); };
+  var startBtn=$('#start'), msg=$('#msg');
+  var stage=$('#stage'), trail=$('#trail');
+  var sc=stage.getContext('2d'), tc=trail.getContext('2d');
+  var loudFill=$('#loudFill'), pitchMarker=$('#pitchMarker');
+  var loudWord=$('#loudWord'), pitchWord=$('#pitchWord'), loudSub=$('#loudSub'), pitchSub=$('#pitchSub');
+  var speedIn=$('#speed'), sensIn=$('#sens'), noteChk=$('#noteChk');
+  var speedV=$('#speedV'), sensV=$('#sensV');
+
+  var LOUD_WORDS=['아주 작게','작게','보통','크게','아주 크게'];
+  var PITCH_WORDS=['아주 낮게','낮게','보통','높게','아주 높게'];
+  var LEVEL_WORDS=['아주 느리게','느리게','보통','빠르게','아주 빠르게'];
+  var SENS_WORDS=['아주 낮게','낮게','보통','높게','아주 높게'];
+  var F_MIN=80, F_MAX=1000;
+  var NOTE_NAMES=['도','도#','레','레#','미','파','파#','솔','솔#','라','라#','시'];
+  var EVAL_MS=100, HIST_N=5, TRAIL_SEC=8;
+
+  // 게이지 눈금과 라벨 만들기
+  function buildLabels(bar, words){
+    for(var i=0;i<5;i++){
+      var l=document.createElement('div'); l.className='lbl'; l.textContent=words[i];
+      l.style.bottom=(i*20+10)+'%'; l.style.transform='translateY(50%)'; bar.appendChild(l);
+      if(i>0){ var t=document.createElement('div'); t.className='tick'; t.style.bottom=(i*20)+'%'; bar.appendChild(t); }
+    }
+  }
+  buildLabels($('#loudBar'), LOUD_WORDS);
+  buildLabels($('#pitchBar'), PITCH_WORDS);
+
+  var audio=null, analyser=null, stream=null, buf=null, byteBuf=null, useFloat=true;
+  var running=false, raf=0, lastT=0;
+  var loud=0, loudDb=-100, pitchPos=0.5, pitchHz=null, voiced=false, lastVoicedT=0;
+  var pitchHist=[], lastEval=0, trailData=[];
+
+  function clamp(x,a,b){ return x<a?a:(x>b?b:x); }
+  function log2(x){ return Math.log(x)/Math.LN2; }
+  function hzToPos(hz){ return clamp(log2(hz/F_MIN)/log2(F_MAX/F_MIN),0,1); }
+  function noteName(hz){ var m=Math.round(69+12*log2(hz/440)); return NOTE_NAMES[((m%12)+12)%12]+(Math.floor(m/12)-1); }
+  function level(v){ return clamp(Math.floor(v*5),0,4); }
+
+  function fitCanvas(c){
+    var r=c.getBoundingClientRect(); var d=window.devicePixelRatio||1;
+    var w=Math.max(1,Math.round(r.width*d)), h=Math.max(1,Math.round(r.height*d));
+    if(c.width!==w||c.height!==h){ c.width=w; c.height=h; }
+  }
+
+  function start(){
+    var AC=window.AudioContext||window.webkitAudioContext;
+    if(!AC){ msg.textContent='이 브라우저는 소리 분석을 지원하지 않아요.'; return; }
+    if(!navigator.mediaDevices||!navigator.mediaDevices.getUserMedia){ msg.textContent='마이크를 쓸 수 없어요. https 주소로 열거나 다른 브라우저를 써 보세요.'; return; }
+    audio=audio||new AC();
+    var p=audio.resume?audio.resume():Promise.resolve();
+    p.then(function(){
+      return navigator.mediaDevices.getUserMedia({audio:{echoCancellation:false,noiseSuppression:false,autoGainControl:false},video:false});
+    }).then(function(s){
+      stream=s;
+      var src=audio.createMediaStreamSource(stream);
+      analyser=audio.createAnalyser(); analyser.fftSize=2048; analyser.smoothingTimeConstant=0;
+      src.connect(analyser);
+      useFloat=typeof analyser.getFloatTimeDomainData==='function';
+      buf=new Float32Array(analyser.fftSize); byteBuf=new Uint8Array(analyser.fftSize);
+      running=true; lastT=performance.now(); lastEval=0; pitchHist=[]; trailData=[]; loud=0; voiced=false;
+      startBtn.textContent='멈추기'; startBtn.classList.add('on'); msg.textContent='';
+      raf=requestAnimationFrame(loop);
+    }).catch(function(e){
+      msg.textContent='마이크를 켤 수 없어요: '+(e.message||e.name||e);
+    });
+  }
+  function stop(){
+    running=false; cancelAnimationFrame(raf);
+    if(stream){ stream.getTracks().forEach(function(t){ t.stop(); }); stream=null; }
+    startBtn.textContent='마이크 켜기'; startBtn.classList.remove('on');
+  }
+  startBtn.addEventListener('click', function(){ if(running) stop(); else start(); });
+
+  function readBuf(){
+    if(useFloat){ analyser.getFloatTimeDomainData(buf); }
+    else { analyser.getByteTimeDomainData(byteBuf); for(var i=0;i<buf.length;i++) buf[i]=(byteBuf[i]-128)/128; }
+  }
+
+  // 자기상관으로 기본 주파수 찾기
+  function detectPitch(b, sr){
+    var N=b.length, e=0, i, lag;
+    for(i=0;i<N;i++) e+=b[i]*b[i];
+    if(e/N<1e-5) return null;
+    var minLag=Math.floor(sr/F_MAX), maxLag=Math.min(N-2, Math.ceil(sr/F_MIN*1.2));
+    var c=new Float32Array(maxLag+2);
+    for(lag=minLag; lag<=maxLag+1; lag++){
+      var s=0, n=N-lag;
+      for(i=0;i<n;i++) s+=b[i]*b[i+lag];
+      c[lag]=s/(e*n/N);
+    }
+    var peaks=[], best=0;
+    for(lag=minLag+1; lag<=maxLag; lag++){
+      if(c[lag]>c[lag-1] && c[lag]>=c[lag+1] && c[lag]>0.3){ peaks.push(lag); if(c[lag]>best) best=c[lag]; }
+    }
+    if(!peaks.length || best<0.6) return null;
+    var pick=peaks[0];
+    for(i=0;i<peaks.length;i++){ if(c[peaks[i]]>=best*0.9){ pick=peaks[i]; break; } }
+    var y0=c[pick-1], y1=c[pick], y2=c[pick+1];
+    var d=(y0-2*y1+y2); var sh=d!==0?0.5*(y0-y2)/d:0;
+    var hz=sr/(pick+sh);
+    if(hz<F_MIN*0.9 || hz>F_MAX*1.1) return null;
+    return {hz:hz, conf:best};
+  }
+
+  function loop(now){
+    if(!running) return;
+    var dt=Math.min(0.1,(now-lastT)/1000); lastT=now;
+    readBuf();
+    var s=0, i;
+    for(i=0;i<buf.length;i++) s+=buf[i]*buf[i];
+    var rms=Math.sqrt(s/buf.length);
+    loudDb=20*Math.log(rms+1e-7)/Math.LN10;
+
+    var sens=parseFloat(sensIn.value);
+    var maxDb=-12-(sens-3)*6, minDb=maxDb-45;
+    var target=clamp((loudDb-minDb)/(maxDb-minDb),0,1);
+    var speed=parseFloat(speedIn.value);
+    var k=Math.pow(1.6,speed-3);
+    var tau=(target>loud)?0.12/k:0.35/k;
+    loud+=(target-loud)*(1-Math.exp(-dt/tau));
+
+    if(now-lastEval>=EVAL_MS){
+      lastEval=now;
+      var p=null;
+      if(target>0.08) p=detectPitch(buf, audio.sampleRate);
+      if(p){
+        pitchHist.push(p.hz); if(pitchHist.length>HIST_N) pitchHist.shift();
+        var sorted=pitchHist.slice().sort(function(a,b){ return a-b; });
+        pitchHz=sorted[Math.floor(sorted.length/2)];
+        voiced=true; lastVoicedT=now;
+      } else {
+        pitchHist=[];
+        if(now-lastVoicedT>600) voiced=false;
+      }
+      trailData.push({t:now,pos:pitchPos,loud:loud,voiced:voiced});
+      while(trailData.length && now-trailData[0].t>TRAIL_SEC*1000) trailData.shift();
+    }
+    if(voiced && pitchHz){
+      var tp=hzToPos(pitchHz);
+      pitchPos+=(tp-pitchPos)*(1-Math.exp(-dt/(0.15/k)));
+    }
+    draw(now); updateText();
+    raf=requestAnimationFrame(loop);
+  }
+
+  function updateText(){
+    loudWord.textContent=LOUD_WORDS[level(loud)];
+    loudSub.textContent='세기 '+Math.round(loud*100)+' / 100';
+    loudFill.style.height=(loud*100)+'%';
+    if(voiced && pitchHz){
+      pitchWord.textContent=PITCH_WORDS[level(pitchPos)];
+      pitchSub.textContent=Math.round(pitchHz)+' Hz'+(noteChk.checked?' · '+noteName(pitchHz):'');
+      pitchMarker.classList.remove('off');
+    } else {
+      pitchWord.textContent='소리 없음';
+      pitchSub.textContent='';
+      pitchMarker.classList.add('off');
+    }
+    pitchMarker.style.bottom=(pitchPos*100)+'%';
+  }
+
+  function draw(now){
+    fitCanvas(stage); fitCanvas(trail);
+    var w=stage.width, h=stage.height, d=window.devicePixelRatio||1;
+    sc.clearRect(0,0,w,h);
+    // 높이 구역 5칸
+    for(var i=0;i<5;i++){
+      sc.fillStyle=(i%2===0)?'rgba(255,255,255,0.025)':'rgba(255,255,255,0.05)';
+      var y0=h*(0.92-(i+1)*0.168), y1=h*(0.92-i*0.168);
+      sc.fillRect(0,y0,w,y1-y0);
+    }
+    var m=Math.min(w,h);
+    var cx=w/2, cy=h*(0.92-pitchPos*0.84);
+    var r=m*(0.05+loud*0.38);
+    // 높이 안내선
+    sc.setLineDash([6*d,6*d]); sc.strokeStyle=voiced?'rgba(56,189,248,0.6)':'rgba(100,116,139,0.5)'; sc.lineWidth=2*d;
+    sc.beginPath(); sc.moveTo(0,cy); sc.lineTo(w,cy); sc.stroke(); sc.setLineDash([]);
+    // 공
+    sc.beginPath(); sc.arc(cx,cy,r,0,Math.PI*2);
+    sc.fillStyle=voiced?'rgba(249,115,22,0.85)':'rgba(148,163,184,0.5)'; sc.fill();
+    sc.lineWidth=3*d; sc.strokeStyle=voiced?'#38bdf8':'#64748b'; sc.stroke();
+    // 안내 글자
+    sc.fillStyle='rgba(248,250,252,0.7)'; sc.font=(12*d)+'px sans-serif'; sc.textAlign='left';
+    sc.fillText('공이 커질수록 = 센 소리', 10*d, 18*d);
+    sc.fillText('공이 올라갈수록 = 높은 소리', 10*d, 34*d);
+
+    // 지나간 소리
+    var tw=trail.width, th=trail.height;
+    tc.clearRect(0,0,tw,th);
+    for(var j=0;j<trailData.length;j++){
+      var e=trailData[j];
+      var x=tw*(1-(now-e.t)/(TRAIL_SEC*1000));
+      var y=th*(0.9-e.pos*0.8);
+      var rr=(2+e.loud*16)*d;
+      tc.beginPath(); tc.arc(x,y,rr,0,Math.PI*2);
+      tc.fillStyle=e.voiced?'rgba(249,115,22,0.8)':'rgba(148,163,184,0.35)'; tc.fill();
+    }
+  }
+
+  function updateSliderText(){
+    speedV.textContent=LEVEL_WORDS[parseInt(speedIn.value,10)-1];
+    sensV.textContent=SENS_WORDS[parseInt(sensIn.value,10)-1];
+  }
+  speedIn.addEventListener('input', updateSliderText);
+  sensIn.addEventListener('input', updateSliderText);
+  updateSliderText();
+  window.addEventListener('resize', function(){ fitCanvas(stage); fitCanvas(trail); });
+  fitCanvas(stage); fitCanvas(trail);
+})();
+</script>
+</body>
+</html>
