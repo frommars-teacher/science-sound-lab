@@ -2,446 +2,226 @@
 <html lang="ko">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
 <title>소리의 세기와 높이 보기</title>
 <style>
-  :root { --bg:#f6f7fb; --card:#fff; --fg:#111827; --muted:#6b7280; --border:#d1d5db; --loud:#f97316; --pitch:#2563eb; }
-  * { box-sizing:border-box; }
-  body { margin:0; font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","Apple SD Gothic Neo","Malgun Gothic",sans-serif; background:var(--bg); color:var(--fg); }
-  .wrap { max-width:900px; margin:0 auto; padding:12px 14px 24px; }
-  header { display:flex; align-items:center; gap:12px; flex-wrap:wrap; margin-bottom:10px; }
-  h1 { font-size:20px; margin:0; flex:1; }
-  button { font-size:16px; padding:10px 18px; border-radius:10px; border:1px solid var(--border); background:#fff; cursor:pointer; }
-  button.primary { background:#111827; color:#fff; border-color:#111827; }
-  button:disabled { opacity:.5; cursor:default; }
-  #status { font-size:13px; color:var(--muted); }
-  .cards { display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:10px; }
-  .card { background:var(--card); border:1px solid var(--border); border-radius:12px; padding:12px 14px; }
-  .card .label { font-size:14px; color:var(--muted); }
-  .card .value { font-size:38px; font-weight:800; line-height:1.2; margin-top:4px; }
-  .card.loud .value { color:var(--loud); }
-  .card.pitch .value { color:var(--pitch); }
-  .card .sub { font-size:14px; color:var(--muted); min-height:18px; }
-  .stage { display:grid; grid-template-columns:70px 1fr 70px; gap:10px; background:var(--card); border:1px solid var(--border); border-radius:12px; padding:12px; height:360px; }
-  .gauge { display:flex; flex-direction:column; align-items:center; gap:6px; }
-  .gtitle { font-size:14px; font-weight:700; }
-  .gbox { position:relative; flex:1; width:36px; border:2px solid var(--border); border-radius:8px; background:#fff; overflow:hidden; }
-  .gfill { position:absolute; left:0; right:0; bottom:0; height:0%; background:var(--loud); transition:height .05s linear; }
-  .gmarker { position:absolute; left:-2px; right:-2px; height:10px; bottom:0; background:var(--pitch); border-radius:4px; transition:bottom .05s linear; }
-  .gticks { position:absolute; inset:0; pointer-events:none; }
-  .gticks div { position:absolute; left:0; right:0; border-top:1px dashed #cbd5e1; }
-  .glabels { display:flex; flex-direction:column; justify-content:space-between; font-size:11px; color:var(--muted); height:100%; }
-  canvas { display:block; width:100%; height:100%; }
-  #ballWrap { position:relative; }
-  .hist { background:var(--card); border:1px solid var(--border); border-radius:12px; padding:10px 12px; margin-top:10px; }
-  .hist .label { font-size:13px; color:var(--muted); margin-bottom:6px; }
-  .hist canvas { height:150px; }
-  .controls { display:grid; grid-template-columns:repeat(auto-fit,minmax(240px,1fr)); gap:10px; margin-top:10px; }
-  .ctl { background:var(--card); border:1px solid var(--border); border-radius:12px; padding:10px 14px; font-size:14px; }
-  .ctl label { display:flex; justify-content:space-between; margin-bottom:4px; }
-  .ctl input[type=range] { width:100%; }
-  .ctl .row { display:flex; gap:8px; align-items:center; flex-wrap:wrap; }
-  .hint { font-size:13px; color:var(--muted); margin-top:12px; line-height:1.5; }
-  @media (max-width:600px) {
-    .card .value { font-size:30px; }
-    .stage { height:300px; grid-template-columns:56px 1fr 56px; }
-    .gbox { width:28px; }
-  }
+:root{--bg:#f7f8fb;--fg:#1f2937;--line:#d7dbe3;--blue:#2563eb;--orange:#f97316;--green:#16a34a}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--fg);font-family:Pretendard,-apple-system,"Apple SD Gothic Neo","Malgun Gothic",sans-serif;-webkit-user-select:none;user-select:none}
+.wrap{max-width:900px;margin:0 auto;padding:12px}
+h1{font-size:20px;margin:4px 0 10px}
+.top{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:10px}
+button{font:inherit;font-size:16px;padding:10px 16px;border-radius:10px;border:1px solid var(--line);background:#fff;cursor:pointer}
+button.primary{background:var(--blue);color:#fff;border-color:var(--blue)}
+button:disabled{opacity:.5}
+.cards{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px}
+.card{background:#fff;border:1px solid var(--line);border-radius:12px;padding:10px 12px}
+.card .t{font-size:14px;color:#6b7280}
+.card .v{font-size:34px;font-weight:800;margin-top:2px;line-height:1.1}
+.card.loud .v{color:var(--orange)}
+.card.pitch .v{color:var(--blue)}
+.card .s{font-size:13px;color:#9ca3af;margin-top:2px;min-height:16px}
+canvas{display:block;width:100%;background:#fff;border:1px solid var(--line);border-radius:12px}
+#main{height:360px}
+#trail{height:150px;margin-top:10px}
+.ctrl{display:grid;grid-template-columns:1fr 1fr;gap:8px 16px;margin-top:10px;font-size:14px}
+.ctrl label{display:flex;align-items:center;gap:8px}
+.ctrl input[type=range]{flex:1}
+.ctrl .row{grid-column:1/3;display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.hint{font-size:13px;color:#6b7280;margin-top:8px;line-height:1.5}
+#calmsg{font-size:14px;color:var(--green);font-weight:700}
+@media (max-width:600px){.card .v{font-size:26px}#main{height:300px}.ctrl{grid-template-columns:1fr}.ctrl .row{grid-column:1/2}}
 </style>
 </head>
 <body>
 <div class="wrap">
-  <header>
-    <h1>소리의 세기와 높이 보기</h1>
-    <button id="startBtn" class="primary">마이크 켜기</button>
-    <span id="status"></span>
-  </header>
+<h1>소리의 세기와 높이 보기</h1>
+<div class="top">
+  <button id="btn" class="primary">마이크 켜기</button>
+  <span id="status" style="font-size:14px;color:#6b7280">기기에서 20~30cm 떨어져 "아~" 하고 소리 내 보세요.</span>
+</div>
 
-  <section class="cards">
-    <div class="card loud">
-      <div class="label">세기 (크고 작음)</div>
-      <div class="value" id="loudText">—</div>
-      <div class="sub">공이 <b>커질수록</b> 센 소리</div>
-    </div>
-    <div class="card pitch">
-      <div class="label">높이 (높고 낮음)</div>
-      <div class="value" id="pitchText">—</div>
-      <div class="sub" id="noteText">공이 <b>올라갈수록</b> 높은 소리</div>
-    </div>
-  </section>
+<div class="cards">
+  <div class="card loud"><div class="t">세기 (크고 작음)</div><div class="v" id="loudTxt">—</div><div class="s" id="loudSub"></div></div>
+  <div class="card pitch"><div class="t">높이 (높고 낮음)</div><div class="v" id="pitchTxt">—</div><div class="s" id="pitchSub"></div></div>
+</div>
 
-  <section class="stage">
-    <div class="gauge">
-      <div class="gtitle" style="color:var(--loud)">세기</div>
-      <div class="gbox">
-        <div class="gfill" id="loudFill"></div>
-        <div class="gticks"><div style="top:20%"></div><div style="top:40%"></div><div style="top:60%"></div><div style="top:80%"></div></div>
-      </div>
-    </div>
-    <div id="ballWrap"><canvas id="ball"></canvas></div>
-    <div class="gauge">
-      <div class="gtitle" style="color:var(--pitch)">높이</div>
-      <div class="gbox">
-        <div class="gticks"><div style="top:20%"></div><div style="top:40%"></div><div style="top:60%"></div><div style="top:80%"></div></div>
-        <div class="gmarker" id="pitchMarker"></div>
-      </div>
-    </div>
-  </section>
+<canvas id="main"></canvas>
+<canvas id="trail"></canvas>
 
-  <section class="hist">
-    <div class="label">지나간 8초 동안의 소리 (공의 크기 = 세기, 공의 높이 = 높이)</div>
-    <canvas id="history"></canvas>
-  </section>
-
-  <section class="controls">
-    <div class="ctl">
-      <label><span>반응 속도</span><span id="speedLabel">보통</span></label>
-      <input type="range" id="speed" min="0" max="4" step="1" value="2">
-    </div>
-    <div class="ctl">
-      <label><span>마이크 감도</span><span id="sensLabel">보통 (0 dB)</span></label>
-      <input type="range" id="sens" min="-12" max="18" step="1" value="0">
-    </div>
-    <div class="ctl">
-      <div class="row">
-        <button id="calBtn">큰 소리 기준 맞추기</button>
-        <button id="resetBtn">기본값</button>
-        <span id="calInfo" style="color:var(--muted);font-size:13px"></span>
-      </div>
-      <div style="font-size:12px;color:var(--muted);margin-top:6px">누른 뒤 3초 동안 가장 크게 "아~" 하면, 그 소리가 "아주 크게"가 됩니다.</div>
-    </div>
-    <div class="ctl">
-      <label><input type="checkbox" id="noteChk"> 계이름 보기</label>
-    </div>
-  </section>
-
-  <p class="hint">기기에서 20~30cm 떨어져 "아~" 하고 소리 내 보세요. 작게/크게, 낮게/높게를 따로따로 바꿔 보세요.<br>
-  박수나 책상 두드리기처럼 음높이가 없는 소리는 세기만 나오고 높이는 "높이 없음"으로 표시됩니다.</p>
+<div class="ctrl">
+  <label>반응 속도 <input type="range" id="speed" min="0" max="100" value="50"> <span id="speedTxt">보통</span></label>
+  <label>마이크 감도 <input type="range" id="gain" min="-10" max="24" value="6"> <span id="gainTxt">+6dB</span></label>
+  <label><input type="checkbox" id="notes"> 계이름 보기</label>
+  <div class="row">
+    <button id="cal">큰 소리 기준 맞추기 (3초)</button>
+    <button id="reset">기본값</button>
+    <span id="calmsg"></span>
+  </div>
+</div>
+<div class="hint">
+세기는 <b>공의 크기·왼쪽 게이지의 채워짐</b>으로, 높이는 <b>공의 위치·오른쪽 마커</b>로 보입니다.<br>
+기기마다 마이크가 달라서 "아주 크게"가 잘 안 나오면 <b>큰 소리 기준 맞추기</b>를 누르고 3초 동안 가장 크게 소리 내 보세요. 그 소리가 "아주 크게"가 됩니다.
+</div>
 </div>
 
 <script>
-(function () {
-  // ---------- 세기(크기) 설정 ----------
-  // 사람이 기기 20~30cm 앞에서 내는 소리 기준. "아주 크게" 상한(dBFS)과 표현 폭.
-  var LOUD_RANGE = 36;          // 표현 폭(dB): 속삭임 ~ 크게 외침
-  var DEFAULT_MAX_DB = -14;     // 이 값 이상이면 "아주 크게" 꽉 채움
-  var maxDb = DEFAULT_MAX_DB;
-  var sensDb = 0;               // 감도 슬라이더(+면 더 민감)
-  var LOUD_STEPS = [0.15, 0.38, 0.62, 0.82];
-  var LOUD_NAMES = ["아주 작게", "작게", "보통", "크게", "아주 크게"];
+(function(){
+// ---------- 설정 ----------
+var DEFAULT_CEIL = -30;   // 이 dBFS 이상이면 "아주 크게" (기기 20~30cm 앞에서 크게 "아~")
+var RANGE_DB = 28;        // 표현 폭: CEIL - RANGE ~ CEIL
+var LOUD_STEPS = [0.12, 0.32, 0.55, 0.76];
+var LOUD_NAMES = ['아주 작게','작게','보통','크게','아주 크게'];
+var PITCH_MIN = 80, PITCH_MAX = 1000;        // Hz, 사람 목소리 범위
+var PITCH_STEPS = [0.2, 0.4, 0.6, 0.8];
+var PITCH_NAMES = ['아주 낮게','낮게','보통','높게','아주 높게'];
+var NOTE_NAMES = ['도','도#','레','레#','미','파','파#','솔','솔#','라','라#','시'];
 
-  // ---------- 높이 설정 ----------
-  var F_MIN = 80, F_MAX = 1000; // 사람 목소리 범위(Hz), 로그 눈금
-  var PITCH_STEPS = [0.2, 0.4, 0.6, 0.8];
-  var PITCH_NAMES = ["아주 낮게", "낮게", "보통", "높게", "아주 높게"];
-  var EVAL_MS = 100;            // 0.1초마다 평가
-  var MEDIAN_N = 5;             // 최근 5회 중앙값
+var ceilDb = DEFAULT_CEIL;
+try{ var sv = localStorage.getItem('soundviz_ceil'); if(sv!==null) ceilDb = parseFloat(sv); }catch(e){}
 
-  // ---------- 반응 속도 ----------
-  var SPEED_FACTORS = [0.5, 0.75, 1, 1.5, 2.2];
-  var SPEED_NAMES = ["아주 느리게", "느리게", "보통", "빠르게", "아주 빠르게"];
-  var speedFactor = 1;
-  var ATTACK_S = 0.12, RELEASE_S = 0.35;
+var ctx=null, analyser=null, src=null, stream=null, running=false;
+var buf=null;
+var level=0, levelRaw=0;           // 0~1
+var pitchHz=0, pitchShown=0;       // Hz
+var pitchHist=[], lastPitchEval=0;
+var trail=[];                      // {t, level, pitch(0~1 or -1)}
+var attack=0.12, release=0.35;
+var calibrating=false, calEnd=0, calMax=-200;
+var lastT=0;
 
-  // ---------- 상태 ----------
-  var audioCtx = null, analyser = null, buf = null, running = false;
-  var loudLevel = 0;            // 0~1 (부드럽게 처리된 값)
-  var curDb = -100;
-  var pitchHist = [];           // 최근 유효 주파수들
-  var pitchPos = 0.45;          // 0~1 (표시용, 부드럽게)
-  var pitchTargetPos = -1;      // -1 = 높이 없음
-  var lastValidFreq = -1;
-  var hasPitch = false;
-  var lastEval = 0;
-  var history = [];             // {t, level, pos}
-  var calibrating = false, calEnd = 0, calPeak = -100;
-  var lastFrame = 0;
+var $=function(id){return document.getElementById(id);};
+var mainC=$('main'), trailC=$('trail');
+var mctx=mainC.getContext('2d'), tctx=trailC.getContext('2d');
 
-  var $ = function (id) { return document.getElementById(id); };
-  var startBtn = $("startBtn"), statusEl = $("status");
-  var loudText = $("loudText"), pitchText = $("pitchText"), noteText = $("noteText");
-  var loudFill = $("loudFill"), pitchMarker = $("pitchMarker");
-  var ballCv = $("ball"), histCv = $("history");
-  var ballCtx = ballCv.getContext("2d"), histCtx = histCv.getContext("2d");
+function fitCanvas(c){ var r=window.devicePixelRatio||1; var w=c.clientWidth, h=c.clientHeight;
+  if(c.width!==Math.round(w*r)||c.height!==Math.round(h*r)){ c.width=Math.round(w*r); c.height=Math.round(h*r); }
+  var g=c.getContext('2d'); g.setTransform(r,0,0,r,0,0); return {w:w,h:h}; }
 
-  function clamp(v, a, b) { return v < a ? a : (v > b ? b : v); }
+// ---------- 컨트롤 ----------
+$('speed').oninput=function(){ var v=this.value/100; // 0 느리게 ~ 1 빠르게
+  attack=0.25-0.2*v; release=0.7-0.55*v;
+  $('speedTxt').textContent = v<0.33?'느리게':(v<0.67?'보통':'빠르게'); };
+$('speed').oninput();
+$('gain').oninput=function(){ $('gainTxt').textContent=(this.value>=0?'+':'')+this.value+'dB'; };
+$('gain').oninput();
+$('cal').onclick=function(){ if(!running){ $('calmsg').textContent='먼저 마이크를 켜 주세요.'; return; }
+  calibrating=true; calMax=-200; calEnd=performance.now()+3000; $('calmsg').textContent='지금 가장 크게 소리 내세요!'; };
+$('reset').onclick=function(){ ceilDb=DEFAULT_CEIL; try{localStorage.removeItem('soundviz_ceil');}catch(e){} $('calmsg').textContent='기본값으로 돌렸습니다.'; };
 
-  function dbToLevel(db) {
-    var top = maxDb - sensDb;
-    var bottom = top - LOUD_RANGE;
-    return clamp((db - bottom) / LOUD_RANGE, 0, 1);
+$('btn').onclick=function(){
+  if(running){ stop(); return; }
+  var AC=window.AudioContext||window.webkitAudioContext;
+  if(!AC||!navigator.mediaDevices){ $('status').textContent='이 브라우저는 마이크를 지원하지 않습니다.'; return; }
+  navigator.mediaDevices.getUserMedia({audio:{echoCancellation:false,noiseSuppression:false,autoGainControl:false}})
+  .then(function(s){
+    stream=s; ctx=new AC(); src=ctx.createMediaStreamSource(s);
+    analyser=ctx.createAnalyser(); analyser.fftSize=2048; analyser.smoothingTimeConstant=0;
+    src.connect(analyser); buf=new Float32Array(analyser.fftSize);
+    running=true; $('btn').textContent='마이크 끄기'; $('btn').classList.remove('primary');
+    $('status').textContent='듣고 있어요. 작게/크게, 낮게/높게를 바꿔 보세요.';
+    lastT=performance.now(); requestAnimationFrame(loop);
+  }).catch(function(e){ $('status').textContent='마이크를 사용할 수 없습니다: '+e.name+' (https 주소 또는 PC에서 열어 주세요)'; });
+};
+function stop(){ running=false; if(stream) stream.getTracks().forEach(function(t){t.stop();}); if(ctx) ctx.close();
+  $('btn').textContent='마이크 켜기'; $('btn').classList.add('primary'); $('status').textContent='멈췄습니다.';
+  $('loudTxt').textContent='—'; $('pitchTxt').textContent='—'; $('loudSub').textContent=''; $('pitchSub').textContent=''; }
+
+// ---------- 분석 ----------
+function detectPitch(b, sr){
+  var n=b.length, rms=0; for(var i=0;i<n;i++) rms+=b[i]*b[i]; rms=Math.sqrt(rms/n);
+  if(rms<0.004) return -1;
+  var minLag=Math.floor(sr/PITCH_MAX), maxLag=Math.ceil(sr/PITCH_MIN);
+  var best=-1, bestV=0, corr=new Float32Array(maxLag+1);
+  for(var lag=minLag; lag<=maxLag; lag++){ var s=0; for(var i=0;i<n-lag;i++) s+=b[i]*b[i+lag]; corr[lag]=s/(n-lag); }
+  var e=0; for(var i=0;i<n;i++) e+=b[i]*b[i]; e/=n;
+  for(var lag=minLag+1; lag<maxLag; lag++){ if(corr[lag]>corr[lag-1]&&corr[lag]>=corr[lag+1]&&corr[lag]>bestV){ bestV=corr[lag]; best=lag; } }
+  if(best<0 || bestV/e<0.5) return -1;
+  // 옥타브 오류 보정: 절반 lag(한 옥타브 위)도 충분히 크면 그쪽을 택하지 않음, 두 배 lag(한 옥타브 아래)가 거의 같으면 아래를 택함
+  var dbl=best*2; if(dbl<=maxLag && corr[dbl]>bestV*0.9) best=dbl;
+  // 포물선 보간
+  var y0=corr[best-1], y1=corr[best], y2=corr[best+1]||y1; var d=(y0-y2)/(2*(y0-2*y1+y2)||1); 
+  return sr/(best+ (isFinite(d)?d:0));
+}
+function median(a){ var s=a.slice().sort(function(x,y){return x-y;}); return s[Math.floor(s.length/2)]; }
+function pitchToUnit(hz){ return (Math.log(hz)-Math.log(PITCH_MIN))/(Math.log(PITCH_MAX)-Math.log(PITCH_MIN)); }
+function noteName(hz){ var m=Math.round(69+12*Math.log2(hz/440)); var oct=Math.floor(m/12)-1; return NOTE_NAMES[((m%12)+12)%12]+oct; }
+function stepName(u, steps, names){ for(var i=0;i<steps.length;i++) if(u<steps[i]) return names[i]; return names[names.length-1]; }
+
+function loop(now){
+  if(!running) return;
+  var dt=Math.min(0.1,(now-lastT)/1000); lastT=now;
+  analyser.getFloatTimeDomainData(buf);
+  // 세기: RMS와 피크를 섞어(피크 쪽 가중) 목소리 세기가 잘 올라오도록
+  var sum=0, peak=0; for(var i=0;i<buf.length;i++){ var v=buf[i]; sum+=v*v; var a=v<0?-v:v; if(a>peak) peak=a; }
+  var rms=Math.sqrt(sum/buf.length);
+  var mix=rms*0.5+peak*0.5*0.7;
+  var db=20*Math.log10(Math.max(mix,1e-6)) + parseFloat($('gain').value);
+  if(calibrating){ if(db>calMax) calMax=db; if(now>calEnd){ calibrating=false; if(calMax>-80){ ceilDb=calMax-1; try{localStorage.setItem('soundviz_ceil',ceilDb);}catch(e){} $('calmsg').textContent='맞췄어요! 이제 그 소리가 "아주 크게"입니다.'; } else $('calmsg').textContent='소리가 너무 작아 맞추지 못했어요. 다시 해 보세요.'; } }
+  var floor=ceilDb-RANGE_DB;
+  levelRaw=Math.max(0,Math.min(1,(db-floor)/RANGE_DB));
+  var tau=levelRaw>level?attack:release; var k=1-Math.exp(-dt/tau); level+=(levelRaw-level)*k;
+
+  // 높이: 0.1초마다 평가, 최근 5회 중앙값
+  if(now-lastPitchEval>=100){ lastPitchEval=now;
+    var p=(levelRaw>0.05)?detectPitch(buf, ctx.sampleRate):-1;
+    pitchHist.push(p); if(pitchHist.length>5) pitchHist.shift();
+    var valid=pitchHist.filter(function(x){return x>0;});
+    pitchHz = valid.length>=3 ? median(valid) : 0;
+    trail.push({t:now, level:level, pitch:pitchHz>0?pitchToUnit(pitchHz):-1});
   }
-  function freqToPos(f) {
-    return clamp(Math.log(f / F_MIN) / Math.log(F_MAX / F_MIN), 0, 1);
-  }
-  function stepName(v, steps, names) {
-    for (var i = 0; i < steps.length; i++) { if (v < steps[i]) return names[i]; }
-    return names[names.length - 1];
-  }
-  function noteName(f) {
-    var names = ["도", "도#", "레", "레#", "미", "파", "파#", "솔", "솔#", "라", "라#", "시"];
-    var n = Math.round(12 * Math.log(f / 440) / Math.log(2)) + 69;
-    var oct = Math.floor(n / 12) - 1;
-    return names[n % 12] + oct + " (" + Math.round(f) + "Hz)";
-  }
+  while(trail.length&&now-trail[0].t>8000) trail.shift();
+  if(pitchHz>0){ var pu=Math.max(0,Math.min(1,pitchToUnit(pitchHz))); pitchShown+= (pu-pitchShown)*Math.min(1,dt/0.15); }
 
-  // ---------- 캔버스 크기 ----------
-  function fitCanvas(cv) {
-    var r = cv.getBoundingClientRect();
-    var dpr = window.devicePixelRatio || 1;
-    if (cv.width !== Math.round(r.width * dpr) || cv.height !== Math.round(r.height * dpr)) {
-      cv.width = Math.round(r.width * dpr);
-      cv.height = Math.round(r.height * dpr);
-    }
-    return { w: r.width, h: r.height, dpr: dpr };
-  }
+  // 글자
+  var loudName = level<0.04 ? '소리 없음' : stepName(level, LOUD_STEPS, LOUD_NAMES);
+  $('loudTxt').textContent=loudName; $('loudSub').textContent=Math.round(level*100)+' / 100';
+  if(pitchHz>0){ $('pitchTxt').textContent=stepName(pitchShown, PITCH_STEPS, PITCH_NAMES);
+    $('pitchSub').textContent=Math.round(pitchHz)+' Hz'+($('notes').checked?' · '+noteName(pitchHz):''); }
+  else { $('pitchTxt').textContent= level<0.04?'소리 없음':'높이 없음'; $('pitchSub').textContent= level<0.04?'':'(박수·소음처럼 음높이가 없는 소리)'; }
 
-  // ---------- 음높이 검출(자기상관) ----------
-  function detectPitch(data, sr) {
-    var n = data.length;
-    var minLag = Math.floor(sr / F_MAX);
-    var maxLag = Math.min(Math.ceil(sr / F_MIN), Math.floor(n / 2));
-    var corr = new Float32Array(maxLag + 1);
-    var best = 0;
-    for (var lag = minLag; lag <= maxLag; lag++) {
-      var num = 0, d1 = 0, d2 = 0;
-      for (var i = 0; i < n - lag; i++) {
-        var a = data[i], b = data[i + lag];
-        num += a * b; d1 += a * a; d2 += b * b;
-      }
-      var c = num / Math.sqrt(d1 * d2 + 1e-12);
-      corr[lag] = c;
-      if (c > best) best = c;
-    }
-    if (best < 0.6) return -1;
-    var thr = best * 0.85;
-    // 첫 번째로 임계값을 넘는 봉우리(옥타브 오류 방지)
-    for (var l = minLag + 1; l < maxLag; l++) {
-      if (corr[l] > thr && corr[l] >= corr[l - 1] && corr[l] >= corr[l + 1]) {
-        var y0 = corr[l - 1], y1 = corr[l], y2 = corr[l + 1];
-        var denom = (y0 - 2 * y1 + y2);
-        var shift = denom === 0 ? 0 : 0.5 * (y0 - y2) / denom;
-        var f = sr / (l + shift);
-        if (f < F_MIN || f > F_MAX) return -1;
-        return f;
-      }
-    }
-    return -1;
-  }
-  function median(arr) {
-    var s = arr.slice().sort(function (a, b) { return a - b; });
-    var m = Math.floor(s.length / 2);
-    return s.length % 2 ? s[m] : (s[m - 1] + s[m]) / 2;
-  }
+  draw(); requestAnimationFrame(loop);
+}
 
-  // ---------- 메인 루프 ----------
-  function loop(ts) {
-    if (!running) return;
-    requestAnimationFrame(loop);
-    var dt = lastFrame ? Math.min((ts - lastFrame) / 1000, 0.1) : 0.016;
-    lastFrame = ts;
+// ---------- 그리기 ----------
+function draw(){
+  var s=fitCanvas(mainC), w=s.w, h=s.h, g=mctx; g.clearRect(0,0,w,h);
+  var pad=16, gw=44, top=pad+10, bottom=h-pad-10, gh=bottom-top;
+  // 왼쪽 세기 게이지(채워짐)
+  g.fillStyle='#f1f5f9'; g.fillRect(pad,top,gw,gh);
+  g.fillStyle='#f97316'; var fh=gh*level; g.fillRect(pad,bottom-fh,gw,fh);
+  g.strokeStyle='#cbd5e1'; g.strokeRect(pad,top,gw,gh);
+  g.fillStyle='#6b7280'; g.font='12px sans-serif'; g.textAlign='center';
+  g.fillText('세기',pad+gw/2,top-2);
+  for(var i=0;i<LOUD_STEPS.length;i++){ var y=bottom-gh*LOUD_STEPS[i]; g.beginPath(); g.moveTo(pad,y); g.lineTo(pad+gw,y); g.strokeStyle='#ffffff'; g.stroke(); }
+  g.textAlign='left'; g.fillStyle='#9ca3af'; g.font='11px sans-serif';
+  var mids=[0.06,0.22,0.435,0.655,0.88]; for(var i=0;i<5;i++) g.fillText(LOUD_NAMES[i],pad+gw+4,bottom-gh*mids[i]+4);
+  // 오른쪽 높이 게이지(마커 위치)
+  var rx=w-pad-gw; g.fillStyle='#f1f5f9'; g.fillRect(rx,top,gw,gh); g.strokeStyle='#cbd5e1'; g.strokeRect(rx,top,gw,gh);
+  g.fillStyle='#6b7280'; g.font='12px sans-serif'; g.textAlign='center'; g.fillText('높이',rx+gw/2,top-2);
+  for(var i=0;i<PITCH_STEPS.length;i++){ var y=bottom-gh*PITCH_STEPS[i]; g.beginPath(); g.moveTo(rx,y); g.lineTo(rx+gw,y); g.strokeStyle='#ffffff'; g.stroke(); }
+  g.textAlign='right'; g.fillStyle='#9ca3af'; g.font='11px sans-serif';
+  var pm=[0.1,0.3,0.5,0.7,0.9]; for(var i=0;i<5;i++) g.fillText(PITCH_NAMES[i],rx-4,bottom-gh*pm[i]+4);
+  if(pitchHz>0){ var my=bottom-gh*pitchShown; g.fillStyle='#2563eb'; g.beginPath(); g.moveTo(rx-2,my); g.lineTo(rx+gw+2,my-8); g.lineTo(rx+gw+2,my+8); g.closePath(); g.fillRect(rx,my-3,gw,6); }
+  // 가운데 공
+  var cx=w/2, minR=10, maxR=Math.min(gh*0.42,120), r=minR+(maxR-minR)*level;
+  var cy= pitchHz>0 ? bottom-gh*pitchShown : bottom-gh*0.5;
+  if(pitchHz<=0) g.globalAlpha=0.35;
+  g.fillStyle='#2563eb'; g.beginPath(); g.arc(cx,cy,r,0,Math.PI*2); g.fill(); g.globalAlpha=1;
+  g.fillStyle='#6b7280'; g.font='12px sans-serif'; g.textAlign='center';
+  g.fillText('공이 커지면 센 소리, 올라가면 높은 소리', cx, h-6);
 
-    analyser.getFloatTimeDomainData(buf);
-    var sum = 0;
-    for (var i = 0; i < buf.length; i++) sum += buf[i] * buf[i];
-    var rms = Math.sqrt(sum / buf.length);
-    curDb = 20 * Math.log10(Math.max(rms, 1e-6));
-
-    // 세기: 커질 땐 빠르게, 작아질 땐 천천히
-    var target = dbToLevel(curDb);
-    var tau = (target > loudLevel ? ATTACK_S : RELEASE_S) / speedFactor;
-    var k = 1 - Math.exp(-dt / tau);
-    loudLevel += (target - loudLevel) * k;
-
-    // 보정 중이면 최대값 기록
-    if (calibrating) {
-      if (curDb > calPeak) calPeak = curDb;
-      var remain = Math.max(0, Math.ceil((calEnd - ts) / 1000));
-      $("calInfo").textContent = "크게 소리 내세요! " + remain + "초";
-      if (ts >= calEnd) finishCalibration();
-    }
-
-    // 높이: 0.1초마다 평가, 최근 5회 중앙값
-    if (ts - lastEval >= EVAL_MS / Math.sqrt(speedFactor)) {
-      lastEval = ts;
-      var gate = target > 0.06;
-      var f = gate ? detectPitch(buf, audioCtx.sampleRate) : -1;
-      pitchHist.push(f);
-      if (pitchHist.length > MEDIAN_N) pitchHist.shift();
-      var valid = pitchHist.filter(function (v) { return v > 0; });
-      if (valid.length >= 3) {
-        var mf = median(valid);
-        lastValidFreq = mf;
-        pitchTargetPos = freqToPos(mf);
-        hasPitch = true;
-      } else {
-        hasPitch = false;
-      }
-      history.push({ t: ts, level: loudLevel, pos: hasPitch ? pitchTargetPos : -1 });
-      while (history.length && ts - history[0].t > 8000) history.shift();
-    }
-    if (hasPitch) {
-      var kp = 1 - Math.exp(-dt / (0.08 / speedFactor));
-      pitchPos += (pitchTargetPos - pitchPos) * kp;
-    }
-
-    // ---------- 글자 표시 ----------
-    var silent = loudLevel < 0.04;
-    loudText.textContent = silent ? "소리 없음" : stepName(loudLevel, LOUD_STEPS, LOUD_NAMES);
-    if (silent) {
-      pitchText.textContent = "—";
-      noteText.innerHTML = "공이 <b>올라갈수록</b> 높은 소리";
-    } else if (hasPitch) {
-      pitchText.textContent = stepName(pitchPos, PITCH_STEPS, PITCH_NAMES);
-      noteText.textContent = $("noteChk").checked ? noteName(lastValidFreq) : "";
-    } else {
-      pitchText.textContent = "높이 없음";
-      noteText.textContent = "";
-    }
-
-    // ---------- 게이지 ----------
-    loudFill.style.height = (loudLevel * 100).toFixed(1) + "%";
-    pitchMarker.style.bottom = "calc(" + (pitchPos * 100).toFixed(1) + "% - 5px)";
-    pitchMarker.style.opacity = (hasPitch && !silent) ? "1" : "0.25";
-
-    drawBall(silent);
-    drawHistory(ts);
-  }
-
-  function drawBall(silent) {
-    var s = fitCanvas(ballCv);
-    var c = ballCtx;
-    c.setTransform(s.dpr, 0, 0, s.dpr, 0, 0);
-    c.clearRect(0, 0, s.w, s.h);
-    // 가로 안내선
-    c.strokeStyle = "#e5e7eb"; c.lineWidth = 1;
-    for (var i = 1; i < 5; i++) {
-      var y = s.h * i / 5;
-      c.beginPath(); c.moveTo(0, y); c.lineTo(s.w, y); c.stroke();
-    }
-    c.fillStyle = "#9ca3af"; c.font = "12px sans-serif"; c.textAlign = "left";
-    c.fillText("높음", 6, 14);
-    c.fillText("낮음", 6, s.h - 6);
-
-    var margin = 30;
-    var rMax = Math.min(s.w, s.h) * 0.42;
-    var r = 10 + loudLevel * (rMax - 10);
-    var y = s.h - margin - pitchPos * (s.h - 2 * margin);
-    var x = s.w / 2;
-    c.beginPath();
-    c.arc(x, y, r, 0, Math.PI * 2);
-    if (silent) { c.fillStyle = "rgba(156,163,175,0.35)"; }
-    else if (hasPitch) { c.fillStyle = "rgba(37,99,235,0.85)"; }
-    else { c.fillStyle = "rgba(107,114,128,0.6)"; }
-    c.fill();
-    c.strokeStyle = "rgba(249,115,22,0.95)"; c.lineWidth = 4 + loudLevel * 6;
-    c.stroke();
-  }
-
-  function drawHistory(now) {
-    var s = fitCanvas(histCv);
-    var c = histCtx;
-    c.setTransform(s.dpr, 0, 0, s.dpr, 0, 0);
-    c.clearRect(0, 0, s.w, s.h);
-    c.strokeStyle = "#e5e7eb"; c.lineWidth = 1;
-    for (var i = 1; i < 5; i++) {
-      var y = s.h * i / 5;
-      c.beginPath(); c.moveTo(0, y); c.lineTo(s.w, y); c.stroke();
-    }
-    var margin = 12;
-    for (var j = 0; j < history.length; j++) {
-      var h = history[j];
-      var x = s.w * (1 - (now - h.t) / 8000);
-      if (h.level < 0.04) continue;
-      var r = 2 + h.level * 22;
-      var yy = h.pos >= 0 ? s.h - margin - h.pos * (s.h - 2 * margin) : s.h - margin;
-      c.beginPath();
-      c.arc(x, yy, r, 0, Math.PI * 2);
-      c.fillStyle = h.pos >= 0 ? "rgba(37,99,235,0.55)" : "rgba(107,114,128,0.4)";
-      c.fill();
-    }
-  }
-
-  // ---------- 보정 ----------
-  function startCalibration() {
-    if (!running) { statusEl.textContent = "먼저 마이크를 켜 주세요."; return; }
-    calibrating = true;
-    calPeak = -100;
-    calEnd = performance.now() + 3000;
-    $("calBtn").disabled = true;
-  }
-  function finishCalibration() {
-    calibrating = false;
-    $("calBtn").disabled = false;
-    if (calPeak > -60) {
-      maxDb = calPeak - 2;
-      try { localStorage.setItem("soundviz_maxDb", String(maxDb)); } catch (e) {}
-      $("calInfo").textContent = "맞춤 완료 (기준 " + maxDb.toFixed(0) + " dB)";
-    } else {
-      $("calInfo").textContent = "소리가 너무 작아 맞추지 못했어요.";
-    }
-  }
-  function resetCalibration() {
-    maxDb = DEFAULT_MAX_DB;
-    try { localStorage.removeItem("soundviz_maxDb"); } catch (e) {}
-    $("calInfo").textContent = "기본값으로 되돌렸어요.";
-  }
-  try {
-    var saved = localStorage.getItem("soundviz_maxDb");
-    if (saved !== null && !isNaN(parseFloat(saved))) {
-      maxDb = parseFloat(saved);
-      $("calInfo").textContent = "저장된 기준 사용 (" + maxDb.toFixed(0) + " dB)";
-    }
-  } catch (e) {}
-
-  // ---------- 마이크 ----------
-  function start() {
-    if (running) return;
-    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-      statusEl.textContent = "이 브라우저는 마이크를 지원하지 않아요. (https 주소에서 열어야 합니다)";
-      return;
-    }
-    startBtn.disabled = true;
-    statusEl.textContent = "마이크 권한을 허용해 주세요…";
-    navigator.mediaDevices.getUserMedia({
-      audio: { echoCancellation: false, noiseSuppression: false, autoGainControl: false },
-      video: false
-    }).then(function (stream) {
-      audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-      var src = audioCtx.createMediaStreamSource(stream);
-      analyser = audioCtx.createAnalyser();
-      analyser.fftSize = 2048;
-      analyser.smoothingTimeConstant = 0;
-      src.connect(analyser);
-      buf = new Float32Array(analyser.fftSize);
-      running = true;
-      startBtn.textContent = "마이크 켜짐";
-      statusEl.textContent = "";
-      if (audioCtx.state === "suspended") audioCtx.resume();
-      requestAnimationFrame(loop);
-    }).catch(function (err) {
-      startBtn.disabled = false;
-      statusEl.textContent = "마이크를 열 수 없어요: " + (err && err.name ? err.name : err);
-    });
-  }
-
-  // ---------- 컨트롤 ----------
-  startBtn.addEventListener("click", start);
-  $("calBtn").addEventListener("click", startCalibration);
-  $("resetBtn").addEventListener("click", resetCalibration);
-  $("speed").addEventListener("input", function (e) {
-    var i = parseInt(e.target.value, 10);
-    speedFactor = SPEED_FACTORS[i];
-    $("speedLabel").textContent = SPEED_NAMES[i];
-  });
-  $("sens").addEventListener("input", function (e) {
-    sensDb = parseInt(e.target.value, 10);
-    var n = sensDb === 0 ? "보통" : (sensDb > 0 ? "더 민감" : "덜 민감");
-    $("sensLabel").textContent = n + " (" + (sensDb > 0 ? "+" : "") + sensDb + " dB)";
-  });
-  window.addEventListener("resize", function () { fitCanvas(ballCv); fitCanvas(histCv); });
-  fitCanvas(ballCv); fitCanvas(histCv);
-  drawBall(true);
+  // 기록
+  var ts=fitCanvas(trailC), tw=ts.w, th=ts.h, t=tctx; t.clearRect(0,0,tw,th);
+  t.fillStyle='#6b7280'; t.font='12px sans-serif'; t.textAlign='left'; t.fillText('지나간 8초 동안의 소리 (공의 크기 = 세기, 공의 높이 = 높이)',8,14);
+  var now=performance.now();
+  for(var i=0;i<trail.length;i++){ var e=trail[i]; var x=tw-8-(now-e.t)/8000*(tw-16); var rr=2+14*e.level;
+    var y= e.pitch>=0 ? 20+(th-30)*(1-Math.max(0,Math.min(1,e.pitch))) : th/2+10;
+    t.globalAlpha= e.pitch>=0?0.75:0.25; t.fillStyle='#2563eb'; t.beginPath(); t.arc(x,y,rr,0,Math.PI*2); t.fill(); }
+  t.globalAlpha=1;
+}
+draw();
+window.addEventListener('resize',draw);
 })();
 </script>
 </body>
